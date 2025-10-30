@@ -1,0 +1,86 @@
+package org.example;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class SecondTask {
+
+    public void execute() {
+
+        try (ExecutorService executor =
+                     Executors.newSingleThreadExecutor()) {
+
+            Thread serverTCPThread = serverTCPThreadCreator(5001, executor);
+            Thread customerTCPThread = customerTCPThreadCreator(5001);
+
+            serverTCPThread.start();
+            customerTCPThread.start();
+        }
+
+    }
+
+    private Thread customerTCPThreadCreator(int port) {
+
+        return new Thread(() -> {
+            String host = "localhost";
+//            int port = 5000;
+
+            try (Socket socket = new Socket(host, port)) {
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+
+                System.out.println("Подключено к серверу. Напиши что-нибудь:");
+                String text;
+                while ((text = userInput.readLine()) != null) {
+                    out.println(text);
+                    String response = in.readLine();
+                    System.out.println("Сервер ответил: " + response);
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+    }
+
+    private Thread serverTCPThreadCreator(int port, ExecutorService executor) {
+        return new Thread(() -> {
+//            int port = 5000;
+            System.out.println("Echo сервер запущен на порту " + port);
+
+            try (ServerSocket serverSocket = new ServerSocket(port)) {
+                while (true) {
+
+                    Socket clientSocket = serverSocket.accept();
+                    System.out.println("Клиент подключился: " + clientSocket.getInetAddress());
+
+                    BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                    PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        String currentLine = line;
+                        executor.execute(() -> {
+                            System.out.println("Получено: " + currentLine);
+                            out.println(currentLine);
+                            out.flush();
+                        });
+                    }
+
+                    clientSocket.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+}
