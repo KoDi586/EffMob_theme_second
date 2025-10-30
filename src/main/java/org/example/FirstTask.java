@@ -7,8 +7,11 @@ public class FirstTask {
         ForSynchronized fs = new ForSynchronized();
 
         Runnable first_runnable = () -> {
+
             System.out.println("First thread is started");
+
             for (int i = 0; i <= integer; i+=2) {
+
                 synchronized (fs) {
                     fs.print(i);
                     try {
@@ -19,10 +22,14 @@ public class FirstTask {
                 }
             }
             Thread.currentThread().interrupt();
+
         };
+
         Runnable second_runnable = () -> {
             System.out.println("Second thread is started");
+
             for (int i = 1; i <= integer; i+=2) {
+
                 synchronized (fs) {
                     fs.print(i);
                     try {
@@ -33,6 +40,7 @@ public class FirstTask {
                 }
             }
             Thread.currentThread().interrupt();
+
         };
 
         Thread thread1 = new Thread(first_runnable);
@@ -46,6 +54,7 @@ public class FirstTask {
 }
 
 class ForSynchronized {
+
     public synchronized void print(Integer integer) {
 
         try {
@@ -54,5 +63,7 @@ class ForSynchronized {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
     }
+
 }
