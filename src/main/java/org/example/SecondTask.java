@@ -12,31 +12,36 @@ import java.util.concurrent.Executors;
 public class SecondTask {
 
     public void execute() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        try (ExecutorService executor =
-                     Executors.newSingleThreadExecutor()) {
+        Thread serverTCPThread = serverTCPThreadCreator(5000, executor);
+        Thread customerTCPThread = customerTCPThreadCreator(5000);
 
-            Thread serverTCPThread = serverTCPThreadCreator(5001, executor);
-            Thread customerTCPThread = customerTCPThreadCreator(5001);
+        serverTCPThread.start();
 
-            serverTCPThread.start();
-            customerTCPThread.start();
+        // время чтобы сервер поднялся и не словить ConnectionRefused
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
 
+        customerTCPThread.start();
     }
 
     private Thread customerTCPThreadCreator(int port) {
 
         return new Thread(() -> {
-            String host = "localhost";
-//            int port = 5000;
 
-            try (Socket socket = new Socket(host, port)) {
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+            String host = "localhost";
+
+            try (Socket socket = new Socket(host, port);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                 BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in))) {
 
                 System.out.println("Подключено к серверу. Напиши что-нибудь:");
+
                 String text;
                 while ((text = userInput.readLine()) != null) {
                     out.println(text);
@@ -48,17 +53,16 @@ public class SecondTask {
                 e.printStackTrace();
             }
         });
-
     }
 
     private Thread serverTCPThreadCreator(int port, ExecutorService executor) {
+
         return new Thread(() -> {
-//            int port = 5000;
+
             System.out.println("Echo сервер запущен на порту " + port);
 
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 while (true) {
-
                     Socket clientSocket = serverSocket.accept();
                     System.out.println("Клиент подключился: " + clientSocket.getInetAddress());
 
@@ -71,16 +75,13 @@ public class SecondTask {
                         executor.execute(() -> {
                             System.out.println("Получено: " + currentLine);
                             out.println(currentLine);
-                            out.flush();
                         });
                     }
-
-                    clientSocket.close();
                 }
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
         });
     }
-
 }
