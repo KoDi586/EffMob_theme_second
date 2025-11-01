@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 public class SecondTask {
 
     public void execute() {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newFixedThreadPool(3);
 
         Thread serverTCPThread = serverTCPThreadCreator(5000, executor);
         Thread customerTCPThread = customerTCPThreadCreator(5000);
@@ -61,19 +61,23 @@ public class SecondTask {
 
             System.out.println("Echo сервер запущен на порту " + port);
 
-            try (ServerSocket serverSocket = new ServerSocket(port)) {
-                while (true) {
-                    Socket clientSocket = serverSocket.accept();
-                    System.out.println("Клиент подключился: " + clientSocket.getInetAddress());
+            try (ServerSocket serverSocket = new ServerSocket(port);
+                 Socket clientSocket = serverSocket.accept();
+                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
-                    BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                    PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            ) {
+                while (true) {
+
+                    System.out.println("Клиент подключился: " + clientSocket.getInetAddress());
 
                     String line;
                     while ((line = in.readLine()) != null) {
                         String currentLine = line;
+
                         executor.execute(() -> {
-                            System.out.println("Получено: " + currentLine);
+                            System.out.println("Получено: " + currentLine + " Обработано потоком: "
+                                    + Thread.currentThread().getName());
                             out.println(currentLine);
                         });
                     }
