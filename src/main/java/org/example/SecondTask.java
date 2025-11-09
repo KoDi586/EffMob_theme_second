@@ -58,29 +58,17 @@ public class SecondTask {
     private Thread serverTCPThreadCreator(int port, ExecutorService executor) {
 
         return new Thread(() -> {
-
             System.out.println("Echo сервер запущен на порту " + port);
 
-            try (ServerSocket serverSocket = new ServerSocket(port);
-                 Socket clientSocket = serverSocket.accept();
-                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            try (ServerSocket serverSocket = new ServerSocket(port)) {
 
-            ) {
                 while (true) {
-
+                    // Ожидание нового клиента
+                    Socket clientSocket = serverSocket.accept();
                     System.out.println("Клиент подключился: " + clientSocket.getInetAddress());
 
-                    String line;
-                    while ((line = in.readLine()) != null) {
-                        String currentLine = line;
-
-                        executor.execute(() -> {
-                            System.out.println("Получено: " + currentLine + " Обработано потоком: "
-                                    + Thread.currentThread().getName());
-                            out.println(currentLine);
-                        });
-                    }
+                    // Передаём задачу на обработку клиентского соединения
+                    executor.execute(() -> handleClient(clientSocket));
                 }
 
             } catch (IOException e) {
@@ -88,4 +76,36 @@ public class SecondTask {
             }
         });
     }
+
+    // Обработка клиентского соединения в отдельном потоке и для каждого клиента отдельно
+    private void handleClient(Socket clientSocket) {
+
+        try (BufferedReader in = new BufferedReader(
+                new InputStreamReader(
+                        clientSocket.getInputStream()
+                ));
+
+             PrintWriter out = new PrintWriter(
+                     clientSocket.getOutputStream(), true)) {
+
+            String line;
+            while ((line = in.readLine()) != null) {
+                System.out.println("Получено от " + clientSocket.getInetAddress() + ": " + line);
+                out.println("Эхо: " + line);
+            }
+
+        } catch (IOException e) {
+            System.out.println("Ошибка при работе с клиентом: " + clientSocket.getInetAddress());
+            e.printStackTrace();
+
+        } finally {
+
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }
