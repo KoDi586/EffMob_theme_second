@@ -1,44 +1,65 @@
 package org.example.third;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class RingBuffer<T> {
+
     private final Object[] buffer;
-    private final int capacity;
-    private int head = 0; // куда писать
-    private int tail = 0; // откуда читать
-    private int size = 0; // сколько элементов в буфере
+    private final Integer capacity;
+    private int head = 0;
+    private int tail = 0;
+
+    private final AtomicInteger size = new AtomicInteger(0);
+    private final Lock writeLock = new ReentrantLock();
+    private final Lock readLock = new ReentrantLock();
+
 
     public RingBuffer(int capacity) {
         this.capacity = capacity;
         this.buffer = new Object[capacity];
     }
 
-    public boolean offer(T value) { // добавить элемент
-        if (size == capacity) {
-            return false; // буфер полон
+    public boolean offer(T value) {
+
+        int indexToWrite; // для оптимизации при записи
+        writeLock.lock();
+        try {
+            if (size.get() == capacity) return false;
+            indexToWrite = head;
+            head = (head + 1) % capacity;
+            size.incrementAndGet();
+        } finally {
+            writeLock.unlock();
         }
-        buffer[head] = value;
-        head = (head + 1) % capacity;
-        size++;
+
+        buffer[indexToWrite] = value;
         return true;
     }
 
     @SuppressWarnings("unchecked")
-    public T poll() { // забрать элемент
-        if (size == 0) {
-            return null; // буфер пуст
+    public T poll() {
+        readLock.lock();
+        try {
+            if (size.get() == 0) {
+                return null;
+            }
+            T value = (T) buffer[tail];
+            tail = (tail + 1) % capacity;
+            size.decrementAndGet();
+            return value;
+        } finally {
+            readLock.unlock();
         }
-        T value = (T) buffer[tail];
-        tail = (tail + 1) % capacity;
-        size--;
-        return value;
     }
 
     public boolean isEmpty() {
-        return size == 0;
+        return size.get() == 0;
     }
 
     public boolean isFull() {
-        return size == capacity;
+        return size.get() == capacity;
     }
 }
 
