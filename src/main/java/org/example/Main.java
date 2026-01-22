@@ -2,11 +2,13 @@ package org.example;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello world!");
 
-        FirstTask firstTask = new FirstTask();
+//        FirstTask firstTask = new FirstTask();
+//        firstTask.execute(10);
 
-        firstTask.execute(10);
+        SecondTask secondTask = new SecondTask();
+
+        secondTask.execute();
 
     }
 }
